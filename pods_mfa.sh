@@ -116,53 +116,67 @@ remove_script_setup() {
   echo_progress  "Removing pods_mfa" 0.5
 }
 
-write_aliases() {
-  has_contexts=$1
-  if [[ "${has_contexts}" = true ]]; then
-    read -r -p "Enter context for production: " prd_input
-    read -r -p "Enter context for qa: " qa_input
-    read -r -p "Enter context for development: " dev_input
-
-    prd=$(echo "${prd_input}" | xargs)
-    qa=$(echo "${qa_input}" | xargs)
-    dev=$(echo "${dev_input}" | xargs)
-
-    prd_context="kubectl config use-context ${prd} >/dev/null 2>&1 &&"
-    qa_context="kubectl config use-context ${qa} >/dev/null 2>&1 &&"
-    dev_context="kubectl config use-context ${dev} >/dev/null 2>&1 &&"
-  else
-    prd_context=""
-    qa_context=""
-    dev_context=""
+verify_aliases() {
+  if [[ ! -f "$HOME/.bash_aliases" ]]; then
+    touch "$HOME/.bash_aliases"
   fi
 
-  alises_title="#Pods aliases"
-  pods_prd="alias podsprd='pods_mfa --check && ${prd_context} k9s -n production'"
-  pods_qa="alias podsqa='pods_mfa --check && ${qa_context} k9s -n qa'"
-  pods_dev="alias podsdev='pods_mfa --check && ${dev_context} k9s -n development'"
-  echo "$(echo -e "\n${alises_title}"; echo "${pods_prd}"; echo "${pods_qa}"; echo "${pods_dev}")" >> "$HOME/.bash_aliases"
-  source "$HOME/.bash_aliases"
+  if grep -q "#Pods aliases" "$HOME/.bash_aliases"; then
+     remove_aliases
+  fi
 }
 
-manage_aliases() {
-  has_contexts=$1
-  change_aliases=$2
-  if [[ "${change_aliases}" = true ]]; then
-    sed -i '/^#Pods aliases$/d' "$HOME/.bash_aliases"
-    sed -i '/^alias podsprd=.*/d' "$HOME/.bash_aliases"
-    sed -i '/^alias podsqa=.*/d' "$HOME/.bash_aliases"
-    sed -i '/^alias podsdev=.*/d' "$HOME/.bash_aliases"
-    write_aliases "${has_contexts}"
-  else
-    if [[ ! -f "$HOME/.bash_aliases" ]]; then
-      touch "$HOME/.bash_aliases"
-      write_aliases "${has_contexts}"
-    else
-      if ! grep -q "#Pods aliases" "$HOME/.bash_aliases"; then
-        write_aliases "${has_contexts}"
+#######################################
+# write_aliases:
+#   Writes specific aliases to the ~/.bash_aliases file.
+#   Inputs:
+#     has_contexts - If true, asks for user input on context for production, QA, and development.
+#   Side effects:
+#     Modifies the ~/.bash_aliases file.
+#######################################
+write_aliases() {
+  local has_contexts="$1"
+
+  if [[ "${has_contexts}" == true ]]; then
+
+    while true; do
+      local continue
+      local input
+      local correct
+      local contexts=()
+
+      for env_context in production qa development; do
+        local context
+        read -rp "Enter context for ${env_context}: " input
+        context="$(echo "${input}" | xargs)"
+        contexts+=("${context}")
+      done
+
+      echo -e "\nInformed Contexts\n   PRD: ${contexts[0]}\n   QA: ${contexts[1]}\n   DEV: ${contexts[2]}"
+      echo -ne "${ARROW} "
+      read -rp "Please confirm, are the contexts correct? [yes/no] " correct
+      continue="$(is_input_positive "${correct}")"
+
+      if [[ "${continue}" == true ]]; then
+        break
       fi
-    fi
+
+      echo " "
+    done
+
+    local prd_context="kubectl config use-context ${contexts[0]} >/dev/null 2>&1 &&"
+    local qa_context="kubectl config use-context ${contexts[1]} >/dev/null 2>&1 &&"
+    local dev_context="kubectl config use-context ${contexts[2]} >/dev/null 2>&1 &&"
+  else
+    local prd_context=""; local qa_context=""; local dev_context="";
   fi
+
+  local alises_title="#Pods aliases"
+  local pods_prd="alias podsprd='pods_mfa -ck && ${prd_context} k9s -n production'"
+  local pods_qa="alias podsqa='pods_mfa -ck && ${qa_context} k9s -n qa'"
+  local pods_dev="alias podsdev='pods_mfa -ck && ${dev_context} k9s -n development'"
+  echo "$(echo -e "\n${alises_title}"; echo "${pods_prd}"; echo "${pods_qa}"; echo "${pods_dev}")" >> "$HOME/.bash_aliases"
+  source "$HOME/.bash_aliases"
 }
 
 #######################################
@@ -388,6 +402,7 @@ show_user_info() {
 }
 
 case "$1" in
+  -ck) check_token ;;
   --check) check_token ;;
   --update) get_new_token ;;
   --set-arn) set_arn ;;
