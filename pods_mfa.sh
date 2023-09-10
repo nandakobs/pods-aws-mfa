@@ -262,6 +262,7 @@ refresh_temp_file_expiration() {
 #     Note that the text output pattern is: "CREDENTIALS ACCESS_KEY  EXPIRATION  SECRET_KEY  SESSION_TOKEN"
 #######################################
 get_new_token() {
+  local response_expected="$1"
 
   while true; do
     local mfa_code
@@ -296,6 +297,10 @@ get_new_token() {
 
       expiration_datetime="$(echo "${output}" | awk '{print $3}')"
       refresh_temp_file_expiration expiration_datetime
+
+      if [[ "${response_expected}" == true ]]; then
+        echo -e "AWS Session Token ${GC}updated successfully${CE}."
+      fi
 
       break
     fi
@@ -354,6 +359,13 @@ check_token() {
   if [[ "${expired_token}" == true ]]; then
     echo -e "AWS Session Token ${RC}has expired${CE}."
     get_new_token
+  else
+    local response_expected="$1"
+
+    if [[ "${response_expected}" == true ]]; then
+      echo -e "\nAWS Session Token is ${GC}currently active${CE}."
+    fi
+
   fi
 }
 
@@ -403,8 +415,8 @@ show_user_info() {
 
 case "$1" in
   -ck) check_token ;;
-  --check) check_token ;;
-  --update) get_new_token ;;
+  --check) check_token true ;;
+  --update) get_new_token true ;;
   --set-arn) set_arn ;;
   --show) show_user_info ;;
   --change-aliases)
