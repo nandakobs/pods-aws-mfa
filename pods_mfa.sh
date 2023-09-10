@@ -194,10 +194,25 @@ verify_arn() {
       err "USER_ARN_NOT_FOUND\n"
       check_dependency "aws"
       echo "Please check your configuration in the aws-cli."
+      echo "Is everything okay? Set your USER_ARN manually with 'pods_mfa --set-arn'"
       exit 1
     fi
 
   fi
+}
+
+set_arn() {
+  local user_arn
+
+  read -rp "Inform your user ARN: " user_arn
+
+  while ! [[ "${user_arn}" =~ arn:aws:iam::[^[:space:]]* ]]; do
+    err "INVALID_USER_ARN\n"
+    read -rp "Insert a valid user ARN: " user_arn
+  done
+
+  echo "export AWS_ARN=\"${user_arn}\"" >> "$HOME/.bashrc"
+  source "$HOME/.bashrc"
 }
 
 refresh_temp_file_expiration() {
@@ -331,6 +346,7 @@ check_token() {
 case "$1" in
   --check) check_token ;;
   --update) get_new_token ;;
+  --set-arn) set_arn ;;
   --change-aliases)
     verify_aliases
     read -rp "Will the new aliases have different contexts? [yes/no] " user_input
