@@ -1,6 +1,55 @@
 #!/bin/bash
+#
+# MIT License
+#
+# Copyright (c) 2023 Fernanda Kobs
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+#
+# Below is a brief overview of this script's functionalities.
+
+show_usage() {
+  cat << EOF
+
+Usage: pods_mfa [option]
+
+The Pods AWS MFA script simplifies pod access in Kubernetes, eliminating the need to checkout your credentials
+and streamlining interactions. Ideal for k9s users and anyone using kubectl with AWS MFA fatigue.
+
+General options:
+        --help               Show this script options.
+        --check              Checks if the credentials have expired, if so, prompts the user to refresh them.
+        --update             Update credentials, even if the current AWS Session Token is still valid.
+        --version            Show script version.
+        --set-arn            Manually set your ARN.
+        --configure          Extracts your ARN, checks external dependencies, and configures aliases if needed.
+        --show-aliases       Show the configured aliases.
+        --change-aliases     Change the value of the configured aliases.
+
+Requires sudo permission options:
+        --install            Make the script executable and callable globally.
+        --uninstall          Remove any change the script did in your machine.
+EOF
+}
 
 source "$HOME/.bashrc"
+readonly SCRIPT_VERSION="version 1.0.0"
 
 #######################################
 ###      PODS_MFA UTILS [START]     ###
@@ -417,8 +466,6 @@ case "$1" in
   -ck) check_token ;;
   --check) check_token true ;;
   --update) get_new_token true ;;
-  --set-arn) set_arn ;;
-  --show) show_user_info ;;
   --change-aliases)
     verify_aliases
     read -rp "Will the new aliases have different contexts? [yes/no] " user_input
@@ -426,6 +473,9 @@ case "$1" in
     write_aliases "${has_contexts}"
     echo "${ARROW} Aliases updated!"
     ;;
+  --show) show_user_info ;;
+  --help) show_usage ;;
+  --set-arn) set_arn ;;
   --install)
     check_sudo "--install" && check_script_setup
     echo -e "The script is ready to work!\nPlease run the command below so you can start using it."
@@ -449,8 +499,10 @@ case "$1" in
 
     check_dependency "kubectl"
     ;;
+  --version) echo "pods_mfa ${SCRIPT_VERSION}" ;;
   --uninstall) check_sudo "--uninstall" && remove_script_setup ;;
   *)
     err "INVALID_ARGUMENT"
+    echo -e "${ARROW} Use the '--help' option to view available arguments."
     ;;
 esac
