@@ -200,6 +200,25 @@ verify_arn() {
   fi
 }
 
+refresh_temp_file_expiration() {
+  local actual_temp_file
+  local new_temp_file
+  local expiration_timestamp
+  local timezone
+
+  actual_temp_file="$(find /tmp -type f -name "pods_mfa.*" -print -quit 2>/dev/null)"
+
+  if [[ -n "${actual_temp_file}" ]]; then
+    rm -f /tmp/pods_mfa.*
+  fi
+
+  new_temp_file="$(mktemp pods_mfa.XXXXXX >/dev/null)"
+  local expiration_datetime="$1"
+  expiration_timestamp="$(date +%s -d "${expiration_datetime}")"
+  timezone="$(date -d "${expiration_datetime}" +%:::z)"
+  echo "$(echo "${expiration_timestamp}"; echo "${timezone}")" >> "${new_temp_file}"
+}
+
 #######################################
 # get_new_token:
 #   Asks for the MFA code and tries to get a new session token using it.
@@ -236,6 +255,7 @@ get_new_token() {
       local access_key
       local secret_key
       local session_token
+      local expiration_datetime
 
       access_key="$(echo "${output}" | awk '{print $2}')"
       secret_key="$(echo "${output}" | awk '{print $4}')"
@@ -244,6 +264,9 @@ get_new_token() {
       aws configure --profile "mfa" set aws_access_key_id "${access_key}"
       aws configure --profile "mfa" set aws_secret_access_key "${secret_key}"
       aws configure --profile "mfa" set aws_session_token "${session_token}"
+
+      expiration_datetime="$(echo "${output}" | awk '{print $3}')"
+      refresh_temp_file_expiration expiration_datetime
 
       break
     fi
@@ -260,11 +283,47 @@ get_new_token() {
   done
 }
 
+#######################################
+# check_token:
+#   Verify the expiration status of the current AWS session token by comparing the previously recorded
+#   expiration time with the current timestamp, or alternatively, utilize an aws-cli command to perform the check.
+#   Side effects:
+#     If the AWS session token has expired, gets a new one.
+#   Related doc:
+#     https://awscli.amazonaws.com/v2/documentation/api/latest/reference/sts/get-caller-identity.html
+#######################################
 check_token() {
-  output=$(aws --profile "mfa" sts get-caller-identity 2>&1)
+  local temp_file
+  local expired_token
 
-  if [[ "$output" == *"An error occurred (ExpiredToken) when calling the GetCallerIdentity operation"* ]]; then
-    echo "AWS Session Token has expired."
+  temp_file="$(find /tmp -type f -name "pods_mfa.*" -print -quit 2>/dev/null)"
+
+  if [[ -n "${temp_file}" ]]; then
+    local expiration_time
+    local timezone
+    local current_time
+
+    expiration_time="$(echo "${temp_file}" | awk '{print $1}')"
+    timezone="$(echo "${temp_file}" | awk '{print $2}')"
+    current_time="$(TZ="${timezone}" date +%s)"
+
+    if (( current_time >= expiration_time )); then
+      expired_token=true
+    fi
+
+  else
+    local output
+
+    output="$(aws --profile "mfa" sts get-caller-identity 2>&1)"
+
+    if [[ "${output}" == *"(ExpiredToken)"* ]]; then
+      expired_token=true
+    fi
+
+  fi
+
+  if [[ "${expired_token}" == true ]]; then
+    echo -e "AWS Session Token ${RC}has expired${CE}."
     get_new_token
   fi
 }
