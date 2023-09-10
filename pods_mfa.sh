@@ -328,37 +328,41 @@ check_token() {
   fi
 }
 
-if [[ "$1" == "--check" ]]; then
-  check_token
-elif [[ "$1" == "--update" ]]; then
-  get_new_token
-elif [[ "$1" == "--change-aliases" ]]; then
-  read -r -p "Will the new aliases have different contexts? [yes/no] " user_input
-  has_contexts=$(echo "${user_input}" | xargs)
-  case "${has_contexts}" in
-  [Yy]* | [Yy][Ee][Ss]*)
-    has_contexts=true
+case "$1" in
+  --check) check_token ;;
+  --update) get_new_token ;;
+  --change-aliases)
+    verify_aliases
+    read -rp "Will the new aliases have different contexts? [yes/no] " user_input
+    has_contexts="$(is_input_positive "${user_input}")"
+    write_aliases "${has_contexts}"
+    echo "${ARROW} Aliases updated!"
     ;;
+  --install)
+    check_sudo "--install" && check_script_setup
+    echo -e "The script is ready to work!\nPlease run the command below so you can start using it."
+    echo -e " ${ARROW} 'pods_mfa --configure'"
+    ;;
+  --configure)
+    verify_arn
+    read -rp "Do you use k9s? [yes/no] " user_input
+    is_k9s_user="$(is_input_positive "${user_input}")"
+
+    if [[ "${is_k9s_user}" == true ]]; then
+      read -rp "Do you need to access different contexts to see your pods? [yes/no] " different
+      has_contexts="$(is_input_positive "${different}")"
+      verify_aliases && write_aliases "${has_contexts}"
+      echo "It's all set up! Access your pods by running 'podsdev', 'podsqa' or 'podsprd'."
+      check_dependency "k9s"
+    else
+      echo -n "It's all set up! You can check if your credentials have expired with 'pods_mfa --check'"
+      echo "or run 'pods_mfa --update' to update it directly."
+    fi
+
+    check_dependency "kubectl"
+    ;;
+  --uninstall) check_sudo "--uninstall" && remove_script_setup ;;
   *)
-    has_contexts=false
+    err "INVALID_ARGUMENT"
     ;;
-  esac
-  manage_aliases "${has_contexts}" true
-  echo "Aliases updated!"
-elif [[ "$1" == "--install" ]]; then
-  check_script_setup
-  echo "The script is ready to work! Please run 'pods_mfa --configure' OR 'pods_mfa --configure-with-contexts' so you can start using it."
-elif [[ "$1" == "--configure" ]]; then
-  manage_aliases false
-  verify_arn
-  echo "It's all set up! Access your pods by running 'podsdev', 'podsqa' or 'podsprd'."
-elif [[ "$1" == "--configure-with-contexts" || "$1" == "-cwc" ]]; then
-  manage_aliases true
-  verify_arn
-  echo "It's all set up! Access your pods by running 'podsdev', 'podsqa' or 'podsprd'."
-elif [[ "$1" == "--configure-for-kubectl" || "$1" == "-cfk" ]]; then
-  verify_arn
-  echo "It's all set up! You can check if your credentials have expired with 'pods_mfa --check' or run 'pods_mfa --update' to update it directly."
-elif [[ "$1" == "--uninstall" ]]; then
-  remove_script_setup
-fi
+esac
