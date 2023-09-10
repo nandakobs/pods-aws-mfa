@@ -2,6 +2,74 @@
 
 source "$HOME/.bashrc"
 
+#######################################
+###      PODS_MFA UTILS [START]     ###
+
+readonly GC="\033[1;38;5;83m" # Green Color
+readonly OC="\033[1;38;5;208m" # Orange Color
+readonly RC="\033[1;91m" # Red Color
+readonly YC="\033[1;38;5;220m" # Yellow Color
+readonly CE="\033[0m" # Color End
+readonly ARROW="${OC}>${CE}"
+
+check_dependency() {
+  local dependency="$1"
+  if ! command -v "${dependency}" &> /dev/null; then
+      echo -ne "${YC}WARNING:${CE} ${dependency} is not installed on this machine. "
+      echo "Please consider installing it to continue."
+      exit 1
+  fi
+}
+
+check_sudo() {
+  local command="$1"
+
+  if [[ $(id -u) -ne 0 ]]; then
+    echo "This command requires sudo permission."
+    echo "Please run 'sudo pods_mfa ${command}'"
+    exit 1
+  fi
+}
+
+echo_progress() {
+  local message="$1"
+  local time="$2"
+  echo -n "${message} "
+
+  for i in 208 202 166 58 64 70 82; do
+      echo -ne "\033[1;38;5;${i}m>${CE}"
+      sleep "${time}"
+  done
+
+  echo -ne "${GC}OK${CE}\n"
+}
+
+err() {
+  echo -e "\n${RC}ERROR:${CE}$*" >&2
+}
+
+is_input_positive() {
+  local input
+  input="$(echo "$1" | xargs)"
+
+  case "${input}" in
+    [Yy]* | [Yy][Ee][Ss]*) echo true ;;
+    [Nn]* | [Nn][Oo]*) echo false ;;
+    *) echo "idk" ;;
+  esac
+}
+
+remove_aliases() {
+  sed -i '/^#Pods aliases$/d' "$HOME/.bash_aliases"
+  sed -i '/^alias podsprd=.*/d' "$HOME/.bash_aliases"
+  sed -i '/^alias podsqa=.*/d' "$HOME/.bash_aliases"
+  sed -i '/^alias podsdev=.*/d' "$HOME/.bash_aliases"
+  source "$HOME/.bash_aliases"
+}
+
+###      PODS_MFA UTILS [END]       ###
+#######################################
+
 check_script_setup() {
   if [[ ! -x ${0} ]]; then
     chmod +x "${0}"
