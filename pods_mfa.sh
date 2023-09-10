@@ -343,10 +343,55 @@ check_token() {
   fi
 }
 
+show_user_info() {
+  local arn_line
+  local user_arn
+
+  echo -e "\npods_aws_mfa/${OC}user_arn${CE}\n"
+
+  if grep -q "export AWS_ARN" "$HOME/.bashrc"; then
+    arn_line="$(awk "/^export AWS_ARN/" "$HOME/.bashrc")"
+    user_arn="$(echo "${arn_line}" | grep -o '"[^"]*"')"
+    echo "    ${user_arn//\"/}"
+  else
+    echo -e "${YC}WARNING:${CE} User ARN is not set."
+    echo -e "Please configure it by running 'pods_mfa --configure' OR 'pods_mfa --set-arn' to do it manually."
+  fi
+
+  echo -e "\npods_aws_mfa/${OC}aliases${CE}/\n"
+
+  if grep -q "#Pods aliases" "$HOME/.bash_aliases"; then
+    local aliases_values=()
+
+    for alias in podsprd podsqa podsdev; do
+       local alias_line
+       local alias_value
+
+       alias_line="$(awk "/^alias ${alias}/" "$HOME/.bash_aliases")"
+       alias_value="$(echo "${alias_line}" | grep -o "'[^']*'")"
+       local alias_without_quotes="${alias_value//\'/}"
+       aliases_values+=("${alias_without_quotes}")
+    done
+
+    local array_item=0
+
+    for alias in podsprd podsqa podsdev; do
+      echo -e "   ${OC}${alias}${CE}: ${aliases_values[${array_item}]}\n\n"
+      ((array_item++))
+    done
+
+    echo -e "   ${ARROW} If you wish to change/remove the contexts run 'pods_mfa --change-aliases',"
+    echo "      or edit the aliases manually in the ~/.bash_aliases file."
+  else
+    echo -e "Pods aliases were not found.\n${ARROW} If you wish to use it run 'pods_mfa --configure'"
+  fi
+}
+
 case "$1" in
   --check) check_token ;;
   --update) get_new_token ;;
   --set-arn) set_arn ;;
+  --show) show_user_info ;;
   --change-aliases)
     verify_aliases
     read -rp "Will the new aliases have different contexts? [yes/no] " user_input
