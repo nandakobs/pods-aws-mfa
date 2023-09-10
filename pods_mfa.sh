@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ~/.bashrc
+source "$HOME/.bashrc"
 
 check_script_setup() {
   if [[ ! -x ${0} ]]; then
@@ -29,11 +29,11 @@ check_script_setup() {
 }
 
 remove_script_setup() {
-  sed -i '/^#Pods aliases$/d' ~/.bash_aliases
-  sed -i '/^alias podsprd=.*/d' ~/.bash_aliases
-  sed -i '/^alias podsqa=.*/d' ~/.bash_aliases
-  sed -i '/^alias podsdev=.*/d' ~/.bash_aliases
-  sed -i '/^export aws_arn=.*/d' ~/.bashrc
+  sed -i '/^#Pods aliases$/d' "$HOME/.bash_aliases"
+  sed -i '/^alias podsprd=.*/d' "$HOME/.bash_aliases"
+  sed -i '/^alias podsqa=.*/d' "$HOME/.bash_aliases"
+  sed -i '/^alias podsdev=.*/d' "$HOME/.bash_aliases"
+  sed -i '/^export aws_arn=.*/d' "$HOME/.bashrc"
   sudo apt-get remove --auto-remove jq
   sudo rm /usr/bin/pods_mfa
 }
@@ -62,25 +62,25 @@ write_aliases() {
   pods_prd="alias podsprd='pods_mfa --check && ${prd_context} k9s -n production'"
   pods_qa="alias podsqa='pods_mfa --check && ${qa_context} k9s -n qa'"
   pods_dev="alias podsdev='pods_mfa --check && ${dev_context} k9s -n development'"
-  echo "$(echo -e "\n${alises_title}"; echo "${pods_prd}"; echo "${pods_qa}"; echo "${pods_dev}")" >> ~/.bash_aliases
-  source ~/.bash_aliases
+  echo "$(echo -e "\n${alises_title}"; echo "${pods_prd}"; echo "${pods_qa}"; echo "${pods_dev}")" >> "$HOME/.bash_aliases"
+  source "$HOME/.bash_aliases"
 }
 
 manage_aliases() {
   has_contexts=$1
   change_aliases=$2
   if [[ "${change_aliases}" = true ]]; then
-    sed -i '/^#Pods aliases$/d' ~/.bash_aliases
-    sed -i '/^alias podsprd=.*/d' ~/.bash_aliases
-    sed -i '/^alias podsqa=.*/d' ~/.bash_aliases
-    sed -i '/^alias podsdev=.*/d' ~/.bash_aliases
+    sed -i '/^#Pods aliases$/d' "$HOME/.bash_aliases"
+    sed -i '/^alias podsprd=.*/d' "$HOME/.bash_aliases"
+    sed -i '/^alias podsqa=.*/d' "$HOME/.bash_aliases"
+    sed -i '/^alias podsdev=.*/d' "$HOME/.bash_aliases"
     write_aliases "${has_contexts}"
   else
-    if [[ ! -f ~/.bash_aliases ]]; then
-      touch ~/.bash_aliases
+    if [[ ! -f "$HOME/.bash_aliases" ]]; then
+      touch "$HOME/.bash_aliases"
       write_aliases "${has_contexts}"
     else
-      if ! grep -q "#Pods aliases" ~/.bash_aliases; then
+      if ! grep -q "#Pods aliases" "$HOME/.bash_aliases"; then
         write_aliases "${has_contexts}"
       fi
     fi
@@ -89,7 +89,7 @@ manage_aliases() {
 
 verify_arn() {
   # Extract and saves your aws_arn if it's not already set
-  if ! grep -q "export aws_arn=" ~/.bashrc; then
+  if ! grep -q "export aws_arn=" "$HOME/.bashrc"; then
     output=$(aws iam get-role --role-name developer 2>&1)
 
     if [[ $output == *"An error occurred"* ]]; then
@@ -104,8 +104,8 @@ verify_arn() {
     fi
 
     if [[ -n "${ARN}" ]]; then
-      echo "export aws_arn=\"${ARN}\"" >>~/.bashrc
-      source ~/.bashrc
+      echo "export aws_arn=\"${ARN}\"" >>"$HOME/.bashrc"
+      source "$HOME/.bashrc"
     fi
   fi
 }
