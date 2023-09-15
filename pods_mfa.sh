@@ -272,15 +272,31 @@ verify_arn() {
 set_arn() {
   local user_arn
 
-  read -rp "Inform your user ARN: " user_arn
+  while true; do
+    read -rp "Inform your user ARN: " user_arn
 
-  while ! [[ "${user_arn}" =~ arn:aws:iam::[^[:space:]]* ]]; do
-    err "INVALID_USER_ARN\n"
-    read -rp "Insert a valid user ARN: " user_arn
+    while ! [[ "${user_arn}" =~ arn:aws:iam::[^[:space:]]* ]]; do
+      err "INVALID_USER_ARN\n"
+      read -rp "Insert a valid user ARN: " user_arn
+    done
+
+    echo -e "\n  ${OC}USER_ARN${CE}: ${user_arn}\n"
+    echo -ne "${ARROW} "
+    read -rp "Please confirm, is this your personal ARN? [yes/no] " correct
+    continue="$(is_input_positive "${correct}")"
+
+    if [[ "${continue}" == true ]]; then
+      break
+    fi
+
+    echo " "
   done
 
+  remove_user_arn_env
   echo "export AWS_ARN=\"${user_arn}\"" >> "$HOME/.bashrc"
   source "$HOME/.bashrc"
+  echo " "
+  echo_progress "Saving your personal ARN" 0.2
 }
 
 refresh_temp_file_expiration() {
