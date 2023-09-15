@@ -86,15 +86,15 @@ echo_progress() {
   echo -n "${message} "
 
   for i in 208 202 166 58 64 70 82; do
-      echo -ne "\033[1;38;5;${i}m>${CE}"
+      echo -ne "\033[1;38;5;${i}m>${CE} "
       sleep "${time}"
   done
 
-  echo -ne "${GC}OK${CE}\n"
+  echo -ne " ${GC}OK${CE}\n"
 }
 
 err() {
-  echo -e "\n${RC}ERROR:${CE}$*" >&2
+  echo -e "\n${RC}ERROR:${CE} $*" >&2
 }
 
 is_input_positive() {
@@ -201,7 +201,7 @@ write_aliases() {
         contexts+=("${context}")
       done
 
-      echo -e "\nInformed Contexts\n   PRD: ${contexts[0]}\n   QA: ${contexts[1]}\n   DEV: ${contexts[2]}"
+      echo -e "\nInformed Contexts\n   PRD: ${contexts[0]}\n   QA: ${contexts[1]}\n   DEV: ${contexts[2]}\n"
       echo -ne "${ARROW} "
       read -rp "Please confirm, are the contexts correct? [yes/no] " correct
       continue="$(is_input_positive "${correct}")"
@@ -503,6 +503,6 @@ case "$1" in
   --uninstall) check_sudo "--uninstall" && remove_script_setup ;;
   *)
     err "INVALID_ARGUMENT"
-    echo -e "${ARROW} Use the '--help' option to view available arguments."
+    echo -e "${ARROW} Use the '--help' option to see available arguments."
     ;;
 esac
