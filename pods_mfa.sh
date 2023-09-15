@@ -116,6 +116,11 @@ remove_aliases() {
   source "$HOME/.bash_aliases"
 }
 
+remove_user_arn_env() {
+  sed -i "/^export AWS_ARN=.*/d" "$HOME/.bashrc"
+  source "$HOME/.bashrc"
+}
+
 ###      PODS_MFA UTILS [END]       ###
 #######################################
 
@@ -159,8 +164,8 @@ check_script_setup() {
 
 remove_script_setup() {
   remove_aliases
-  sed -i "/^export AWS_ARN=.*/d" "$HOME/.bashrc"
-  source "$HOME/.bashrc"
+  remove_user_arn_env
+  rm -f /tmp/pods_mfa.*
   sudo rm /usr/bin/pods_mfa
   echo_progress  "Removing pods_mfa" 0.5
 }
@@ -245,7 +250,7 @@ verify_arn() {
     output="$(aws iam get-user --output text 2>&1)"
     arn="$(echo "${output}" | grep -o -P 'arn:aws:iam::[^[:space:]]*')"
 
-    if [[ -z "${arn}" ]]; then
+    if [[ -n "${arn}" ]]; then
 
       if [[ "${arn}" == *":user/"* ]]; then
         arn="${arn/user/mfa}"
@@ -500,7 +505,7 @@ case "$1" in
     check_dependency "kubectl"
     ;;
   --version) echo "pods_mfa ${SCRIPT_VERSION}" ;;
-  --uninstall) check_sudo "--uninstall" && remove_script_setup ;;
+  --uninstall) remove_script_setup ;;
   *)
     err "INVALID_ARGUMENT"
     echo -e "${ARROW} Use the '--help' option to see available arguments."
