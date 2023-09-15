@@ -284,17 +284,17 @@ refresh_temp_file_expiration() {
   local expiration_timestamp
   local timezone
 
-  actual_temp_file="$(find /tmp -type f -name "pods_mfa.*" -print -quit 2>/dev/null)"
+  actual_temp_file="$(find /tmp -type f -name "pods_mfa.*" 2>/dev/null)"
 
   if [[ -n "${actual_temp_file}" ]]; then
     rm -f /tmp/pods_mfa.*
   fi
 
-  new_temp_file="$(mktemp pods_mfa.XXXXXX >/dev/null)"
+  new_temp_file="$(mktemp /tmp/pods_mfa.XXXXXX)"
   local expiration_datetime="$1"
   expiration_timestamp="$(date +%s -d "${expiration_datetime}")"
   timezone="$(date -d "${expiration_datetime}" +%:::z)"
-  echo "$(echo "${expiration_timestamp}"; echo "${timezone}")" >> "${new_temp_file}"
+  echo "${expiration_timestamp} ${timezone}" >> "${new_temp_file}"
 }
 
 #######################################
@@ -345,7 +345,7 @@ get_new_token() {
       aws configure --profile "mfa" set aws_session_token "${session_token}"
 
       expiration_datetime="$(echo "${output}" | awk '{print $3}')"
-      refresh_temp_file_expiration expiration_datetime
+      refresh_temp_file_expiration  "${expiration_datetime}"
 
       if [[ "${response_expected}" == true ]]; then
         echo -e "AWS Session Token ${GC}updated successfully${CE}."
@@ -379,15 +379,15 @@ check_token() {
   local temp_file
   local expired_token
 
-  temp_file="$(find /tmp -type f -name "pods_mfa.*" -print -quit 2>/dev/null)"
+  temp_file="$(find /tmp -type f -name "pods_mfa.*" 2>/dev/null)"
 
   if [[ -n "${temp_file}" ]]; then
     local expiration_time
     local timezone
     local current_time
 
-    expiration_time="$(echo "${temp_file}" | awk '{print $1}')"
-    timezone="$(echo "${temp_file}" | awk '{print $2}')"
+    expiration_time="$(awk '{print $1}' "${temp_file}")"
+    timezone="$(awk '{print $2}' "${temp_file}")"
     current_time="$(TZ="${timezone}" date +%s)"
 
     if (( current_time >= expiration_time )); then
@@ -455,8 +455,8 @@ show_user_info() {
       ((array_item++))
     done
 
-    echo -e "   ${ARROW} If you wish to change/remove the contexts run 'pods_mfa --change-aliases',"
-    echo "      or edit the aliases manually in the ~/.bash_aliases file."
+    echo -ne "   ${ARROW} If you wish to change/remove the contexts run 'pods_mfa --change-aliases',"
+    echo " or edit the aliases manually in the ~/.bash_aliases file."
   else
     echo -e "Pods aliases were not found.\n${ARROW} If you wish to use it run 'pods_mfa --configure'"
   fi
