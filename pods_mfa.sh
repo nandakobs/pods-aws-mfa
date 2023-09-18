@@ -32,7 +32,7 @@ Usage: pods_mfa [option]
 The Pods AWS MFA script simplifies pod access in Kubernetes, eliminating the need to checkout your credentials
 and streamlining interactions. Ideal for k9s users and anyone using kubectl with AWS MFA fatigue.
 
-General options:
+Options:
         --help               Show this script options.
         --check              Checks if the credentials have expired, if so, prompts the user to refresh them.
         --update             Update credentials, even if the current AWS Session Token is still valid.
@@ -41,8 +41,6 @@ General options:
         --configure          Extracts your ARN, checks external dependencies, and configures aliases if needed.
         --show-aliases       Show the configured aliases.
         --change-aliases     Change the value of the configured aliases.
-
-Requires sudo permission options:
         --install            Make the script executable and callable globally.
         --uninstall          Remove any change the script did in your machine.
 EOF
@@ -106,6 +104,13 @@ is_input_positive() {
     [Nn]* | [Nn][Oo]*) echo false ;;
     *) echo "idk" ;;
   esac
+}
+
+is_k9s_user() {
+  installed="$(command -v k9s &> /dev/null)"
+  if [[ -z "${installed}" ]]; then
+    echo true
+  fi
 }
 
 remove_aliases() {
