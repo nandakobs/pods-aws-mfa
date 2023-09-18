@@ -10,23 +10,14 @@ and streamlining interactions. Ideal for k9s users and anyone using kubectl with
 
 To use this script, you need to have the following prerequisites installed and configured:
 
-- AWS Credentials: The script requires AWS credentials to authenticate with the AWS API. Make sure you have already 
-configured your AWS credentials by running the following command and providing your AWS Access Key ID, Secret Access Key,
-default region, and output format:
-
-  ```shell
-  aws configure
-  ```
+- [`aws-cli`](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html): The AWS Command Line Interface (CLI).
   
-- MFA Device: The script assumes that you have an MFA (Multi-Factor Authentication) device associated with your AWS account.
-This is required to generate the temporary session tokens for AWS API access. Ensure that you have set up an MFA device 
-for your AWS account before using the script.
+- [`MFA device`](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_enable_virtual.html#enable-virt-mfa-for-iam-user): The script assumes that you have an MFA (Multi-Factor Authentication) device associated with your AWS account.
+This is required to generate the temporary session tokens for AWS API access.
 
-- `kubectl`: The Kubernetes command-line tool. You can install it by following the instructions in the official Kubernetes
-documentation for your operating system.
+- [`kubectl`](https://kubernetes.io/docs/tasks/tools/#kubectl): The Kubernetes command-line tool.
 
-- `k9s`: A terminal-based UI for Kubernetes. You can install it by following the instructions provided in the official 
-k9s documentation for your operating system.
+- [`k9s`](https://github.com/derailed/k9s#installation): A terminal-based UI for Kubernetes. Optional.
 
 ## How to Use
 
@@ -37,13 +28,16 @@ k9s documentation for your operating system.
    sudo bash ./pods_mfa.sh --install
    ```
   
-Then run `pods_mfa --configure` to configure your info and then it's all set up! 
+Then run `pods_mfa --configure` to configure your info and then it's all set up!
 
-If you're a `k9s` user now you can access your pods by running `podsdev`, `podsqa` or `podsprd` without worrying about 
-your AWS credential's expiration or having to change the contexts before accessing them.
+`K9s` users can access their pods by running `podsdev`, `podsqa` or `podsprd` without worrying about AWS credential's
+expiration or having to change the contexts before accessing them.
 
 If you only use `kubectl` you can check if your credentials have expired with `pods_mfa --check`, and if so, update it. 
 Or run `pods_mfa --update` to update it directly.
+
+In case you encounter diverse contexts when accessing your clusters, this script simplifies the process.
+You can smoothly switch between them by executing aliases like `toprd`, `toqa` and `todev`.
 
 ## How it Works
 
