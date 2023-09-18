@@ -114,7 +114,10 @@ is_k9s_user() {
 }
 
 remove_aliases() {
-  sed -i '/^#Pods aliases$/d' "$HOME/.bash_aliases"
+  sed -i '/^#Pods AWS MFA Aliases$/d' "$HOME/.bash_aliases"
+  sed -i '/^alias toprd=.*/d' "$HOME/.bash_aliases"
+  sed -i '/^alias toqa=.*/d' "$HOME/.bash_aliases"
+  sed -i '/^alias todev=.*/d' "$HOME/.bash_aliases"
   sed -i '/^alias podsprd=.*/d' "$HOME/.bash_aliases"
   sed -i '/^alias podsqa=.*/d' "$HOME/.bash_aliases"
   sed -i '/^alias podsdev=.*/d' "$HOME/.bash_aliases"
@@ -180,7 +183,7 @@ verify_aliases() {
     touch "$HOME/.bash_aliases"
   fi
 
-  if grep -q "#Pods aliases" "$HOME/.bash_aliases"; then
+  if grep -q "#Pods AWS MFA Aliases" "$HOME/.bash_aliases"; then
      remove_aliases
   fi
 }
@@ -195,6 +198,8 @@ verify_aliases() {
 #######################################
 write_aliases() {
   local has_contexts="$1"
+  local k9s_user
+  local contexts=()
 
   if [[ "${has_contexts}" == true ]]; then
 
@@ -202,7 +207,6 @@ write_aliases() {
       local continue
       local input
       local correct
-      local contexts=()
 
       for env_context in production qa development; do
         local context
@@ -230,11 +234,21 @@ write_aliases() {
     local prd_context=""; local qa_context=""; local dev_context="";
   fi
 
-  local alises_title="#Pods aliases"
+  local title="#Pods AWS MFA Aliases"
+  local to_prd="alias toprd='kubectl config use-context ${contexts[0]}'"
+  local to_qa="alias toqa='kubectl config use-context ${contexts[1]}'"
+  local to_dev="alias todev='kubectl config use-context ${contexts[2]}'"
   local pods_prd="alias podsprd='pods_mfa -ck && ${prd_context} k9s -n production'"
   local pods_qa="alias podsqa='pods_mfa -ck && ${qa_context} k9s -n qa'"
   local pods_dev="alias podsdev='pods_mfa -ck && ${dev_context} k9s -n development'"
-  echo "$(echo -e "\n${alises_title}"; echo "${pods_prd}"; echo "${pods_qa}"; echo "${pods_dev}")" >> "$HOME/.bash_aliases"
+
+  printf "%s\n" "${title}" "${to_prd}" "${to_qa}" "${to_dev}" >> "$HOME/.bash_aliases"
+  k9s_user="$(is_k9s_user)"
+
+  if [ "${k9s_user}" == true ]; then
+    printf "%s\n" "${pods_prd}" "${pods_qa}" "${pods_dev}" >> "$HOME/.bash_aliases"
+  fi
+
   source "$HOME/.bash_aliases"
 }
 
@@ -453,7 +467,9 @@ show_user_info() {
   if grep -q "export AWS_ARN" "$HOME/.bashrc"; then
     arn_line="$(awk "/^export AWS_ARN/" "$HOME/.bashrc")"
     user_arn="$(echo "${arn_line}" | grep -o '"[^"]*"')"
-    echo "    ${user_arn//\"/}"
+    echo "   ${user_arn//\"/}"
+    echo -ne "\n    ${ARROW} If you wish to change your user ARN run 'pods_mfa --set-arn',"
+    echo " or edit it manually in the ~/.bashrc file."
   else
     echo -e "${YC}WARNING:${CE} User ARN is not set."
     echo -e "Please configure it by running 'pods_mfa --configure' OR 'pods_mfa --set-arn' to do it manually."
@@ -461,10 +477,18 @@ show_user_info() {
 
   echo -e "\npods_aws_mfa/${OC}aliases${CE}/\n"
 
-  if grep -q "#Pods aliases" "$HOME/.bash_aliases"; then
+  if grep -q "#Pods AWS MFA Aliases" "$HOME/.bash_aliases"; then
     local aliases_values=()
+    local aliases_names=("toprd" "toqa" "todev")
 
-    for alias in podsprd podsqa podsdev; do
+    local k9s_user
+    k9s_user="$(is_k9s_user)"
+
+    if [ "${k9s_user}" == true ]; then
+      aliases_names+=("podsprd" "podsqa" "podsdev")
+    fi
+
+    for alias in "${aliases_names[@]}"; do
        local alias_line
        local alias_value
 
@@ -476,15 +500,19 @@ show_user_info() {
 
     local array_item=0
 
-    for alias in podsprd podsqa podsdev; do
-      echo -e "   ${OC}${alias}${CE}: ${aliases_values[${array_item}]}\n\n"
+    for alias in "${aliases_names[@]}"; do
+
+      if [[ -n "${aliases_values[${array_item}]}" ]]; then
+        echo -e "   ${OC}${alias}${CE}: ${aliases_values[${array_item}]}\n"
+      fi
+
       ((array_item++))
     done
 
     echo -ne "   ${ARROW} If you wish to change/remove the contexts run 'pods_mfa --change-aliases',"
     echo " or edit the aliases manually in the ~/.bash_aliases file."
   else
-    echo -e "Pods aliases were not found.\n${ARROW} If you wish to use it run 'pods_mfa --configure'"
+    echo -e "Aliases were not found.\n${ARROW} If you wish to use it run 'pods_mfa --configure'"
   fi
 }
 
@@ -509,17 +537,20 @@ case "$1" in
     ;;
   --configure)
     verify_arn
-    read -rp "Do you use k9s? [yes/no] " user_input
-    is_k9s_user="$(is_input_positive "${user_input}")"
+    read -rp "Do you need to access different contexts to see your pods? [yes/no] " different
+    has_contexts="$(is_input_positive "${different}")"
+    verify_aliases && write_aliases "${has_contexts}"
+    k9s_user="$(is_k9s_user)"
+    echo "It's all set up!"
 
-    if [[ "${is_k9s_user}" == true ]]; then
-      read -rp "Do you need to access different contexts to see your pods? [yes/no] " different
-      has_contexts="$(is_input_positive "${different}")"
-      verify_aliases && write_aliases "${has_contexts}"
-      echo "It's all set up! Access your pods by running 'podsdev', 'podsqa' or 'podsprd'."
-      check_dependency "k9s"
+    if [[ "${has_contexts}" == true ]]; then
+      echo -e "${ARROW} Change your clusters context by running 'toprd', 'toqa' or 'todev'."
+    fi
+
+    if [[ "${k9s_user}" == true ]]; then
+        echo -e "${ARROW} Access your pods by running 'podsdev', 'podsqa' or 'podsprd'."
     else
-      echo -n "It's all set up! You can check if your credentials have expired with 'pods_mfa --check'"
+      echo -ne "${ARROW} You can check if your credentials have expired with 'pods_mfa --check'"
       echo "or run 'pods_mfa --update' to update it directly."
     fi
 
