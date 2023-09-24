@@ -43,6 +43,7 @@ Options:
         --change-aliases     Change the value of the configured aliases.
         --install            Make the script executable and callable globally.
         --uninstall          Remove any change the script did in your machine.
+
 EOF
 }
 
@@ -63,7 +64,7 @@ check_dependency() {
   local dependency="$1"
   if ! command -v "${dependency}" &> /dev/null; then
       echo -ne "${YC}WARNING:${CE} ${dependency} is not installed on this machine. "
-      echo "Please consider installing it to continue."
+      echo -e "Please consider installing it to continue.\n"
       exit 1
   fi
 }
@@ -73,7 +74,7 @@ check_sudo() {
 
   if [[ $(id -u) -ne 0 ]]; then
     echo "This command requires sudo permission."
-    echo "Please run 'sudo pods_mfa ${command}'"
+    echo -e "Please run 'sudo pods_mfa ${command}'\n"
     exit 1
   fi
 }
@@ -281,7 +282,7 @@ verify_arn() {
       err "USER_ARN_NOT_FOUND\n"
       check_dependency "aws"
       echo "Please check your configuration in the aws-cli."
-      echo "Is everything okay? Set your USER_ARN manually with 'pods_mfa --set-arn'"
+      echo -e "Is everything okay? Set your USER_ARN manually with 'pods_mfa --set-arn'\n"
       exit 1
     fi
 
@@ -388,7 +389,7 @@ get_new_token() {
       refresh_temp_file_expiration  "${expiration_datetime}"
 
       if [[ "${response_expected}" == true ]]; then
-        echo -e "AWS Session Token ${GC}updated successfully${CE}."
+        echo -e "AWS Session Token ${GC}updated successfully${CE}.\n"
       fi
 
       break
@@ -452,7 +453,7 @@ check_token() {
     local response_expected="$1"
 
     if [[ "${response_expected}" == true ]]; then
-      echo -e "\nAWS Session Token is ${GC}currently active${CE}."
+      echo -e "\nAWS Session Token is ${GC}currently active${CE}.\n"
     fi
 
   fi
@@ -510,9 +511,9 @@ show_user_info() {
     done
 
     echo -ne "   ${ARROW} If you wish to change/remove the contexts run 'pods_mfa --change-aliases',"
-    echo " or edit the aliases manually in the ~/.bash_aliases file."
+    echo -e " or edit the aliases manually in the ~/.bash_aliases file.\n"
   else
-    echo -e "Aliases were not found.\n${ARROW} If you wish to use it run 'pods_mfa --configure'"
+    echo -e "Aliases were not found.\n${ARROW} If you wish to use it run 'pods_mfa --configure'\n"
   fi
 }
 
@@ -525,7 +526,7 @@ case "$1" in
     read -rp "Will the new aliases have different contexts? [yes/no] " user_input
     has_contexts="$(is_input_positive "${user_input}")"
     write_aliases "${has_contexts}"
-    echo "${ARROW} Aliases updated!"
+    echo -e "${ARROW} Aliases updated!\n"
     ;;
   --show) show_user_info ;;
   --help) show_usage ;;
@@ -533,7 +534,7 @@ case "$1" in
   --install)
     check_sudo "--install" && check_script_setup
     echo -e "The script is ready to work!\nPlease run the command below so you can start using it."
-    echo -e " ${ARROW} 'pods_mfa --configure'"
+    echo -e " ${ARROW} pods_mfa --configure\n"
     ;;
   --configure)
     verify_arn
@@ -548,18 +549,18 @@ case "$1" in
     fi
 
     if [[ "${k9s_user}" == true ]]; then
-        echo -e "${ARROW} Access your pods by running 'podsdev', 'podsqa' or 'podsprd'."
+        echo -e "${ARROW} Access your pods by running 'podsdev', 'podsqa' or 'podsprd'.\n"
     else
       echo -ne "${ARROW} You can check if your credentials have expired with 'pods_mfa --check'"
-      echo "or run 'pods_mfa --update' to update it directly."
+      echo -e "or run 'pods_mfa --update' to update it directly.\n"
     fi
 
     check_dependency "kubectl"
     ;;
-  --version) echo "pods_mfa ${SCRIPT_VERSION}" ;;
+  --version) echo -e "pods_mfa ${SCRIPT_VERSION}\n" ;;
   --uninstall) remove_script_setup ;;
   *)
     err "INVALID_ARGUMENT"
-    echo -e "${ARROW} Use the '--help' option to see available arguments."
+    echo -e "${ARROW} Use the '--help' option to see available arguments.\n"
     ;;
 esac
