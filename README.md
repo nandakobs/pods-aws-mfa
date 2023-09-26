@@ -73,7 +73,7 @@ The script supports the following options:
 
 - `--set-arn`: Manually set your ARN.
 
-- `--show-aliases`: Show the configured aliases.
+- `--show`: Show the configured ARN and aliases.
 
 - `--change-aliases`: Change the value of the configured aliases.
 

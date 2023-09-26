@@ -34,12 +34,12 @@ and streamlining interactions. Ideal for k9s users and anyone using kubectl with
 
 Options:
         --help               Show this script options.
+        --show               Show the configured ARN and aliases.
         --check              Checks if the credentials have expired, if so, prompts the user to refresh them.
         --update             Update credentials, even if the current AWS Session Token is still valid.
         --version            Show script version.
         --set-arn            Manually set your ARN.
         --configure          Extracts your ARN, checks external dependencies, and configures aliases if needed.
-        --show-aliases       Show the configured aliases.
         --change-aliases     Change the value of the configured aliases.
         --install            Make the script executable and callable globally.
         --uninstall          Remove any change the script did in your machine.
